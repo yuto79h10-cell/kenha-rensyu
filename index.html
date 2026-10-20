@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ケンハをれんしゅうしよう</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f0f4f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      color: #333;
+    }
+
+    h1 { margin-bottom: 20px; font-size: 1.8rem; text-align: center; }
+
+    /* モード選択画面 */
+    .mode-select-card {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 450px;
+      width: 100%;
+      margin-top: 40px;
+    }
+    .mode-btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-practice { background-color: #4caf50; color: white; }
+    .btn-practice:hover { background-color: #43a047; }
+    .btn-admin-login { background-color: #ff9800; color: white; }
+    .btn-admin-login:hover { background-color: #fb8c00; }
+
+    /* メインコンテンツエリア */
+    .app-container {
+      width: 100%;
+      max-width: 850px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ヘッダー・モード切替 */
+    .top-bar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      background: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .mode-badge {
+      font-weight: bold;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+    }
+    .badge-practice { background: #e8f5e9; color: #2e7d32; }
+    .badge-admin { background: #fff3e0; color: #e65100; }
+    .btn-switch-mode {
+      background: #607d8b;
+      color: white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    /* 管理者編集パネル */
+    .admin-panel {
+      width: 100%;
+      background: #ffffff;
+      border: 2px solid #ff9800;
+      border-radius: 8px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .admin-panel h2 {
+      font-size: 1.1rem;
+      color: #e65100;
+      margin-bottom: 10px;
+      border-bottom: 2px solid #ffe0b2;
+      padding-bottom: 5px;
+    }
+
+    .editor-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+    .editor-row label { font-weight: bold; min-width: 90px; font-size: 0.9rem; }
+    .editor-row input[type="text"], .editor-row select { flex: 1; padding: 8px; border: 1px solid #bbb; border-radius: 4px; }
+    .editor-row textarea { flex: 1; height: 60px; padding: 8px; border: 1px solid #bbb; border-radius: 4px; resize: vertical; }
+
+    .btn-action {
+      padding: 8px 14px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; color: white;
+    }
+    .btn-save { background-color: #0288d1; }
+    .btn-delete { background-color: #f44336; }
+
+    /* 楽譜エリア */
+    .sheet-music-container {
+      width: 100%;
+      background: #fffdf0;
+      border: 2px solid #555;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .sheet-title { font-weight: bold; margin-bottom: 15px; text-align: center; font-size: 1.2rem; }
+    
+    .measures-wrapper {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      justify-content: flex-start;
+      overflow-x: auto;
+      white-space: nowrap;
+      padding: 20px 10px 10px 10px;
+      background: repeating-linear-gradient(to bottom, transparent, transparent 8px, #b0bec5 9px, #b0bec5 10px);
+      background-size: 100% 50px;
+      border-top: 2px solid #333;
+      border-bottom: 2px solid #333;
+    }
+
+    .time-signature {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+      font-weight: bold;
+      font-size: 1.4rem;
+      line-height: 1.1;
+      border-right: 3px double #333;
+      background-color: rgba(255, 253, 240, 0.9);
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    /* 小節スタイル */
+    .measure {
+      display: flex;
+      flex-wrap: nowrap;
+      flex-shrink: 0;
+      gap: 8px;
+      align-items: center;
+      padding: 10px;
+      border-right: 2px solid #333;
+      min-width: 120px;
+      position: relative;
+      background-color: rgba(255, 253, 240, 0.7);
+      cursor: pointer;
+      transition: background-color 0.2s, box-shadow 0.2s;
+    }
+    .measure:hover { background-color: #fff9c4; }
+    .measure.selected-start {
+      background-color: #fff3e0 !important;
+      outline: 3px solid #ff9800;
+      outline-offset: -3px;
+    }
+
+    .measure:first-child { border-left: 2px solid #333; }
+    .measure-number { position: absolute; top: -18px; left: 4px; font-size: 0.75rem; color: #555; font-weight: bold; }
+
+    .note {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: #ffffff;
+      border: 2px solid #455a64;
+      border-radius: 8px;
+      padding: 4px 8px;
+      min-width: 36px;
+      font-weight: bold;
+      font-size: 0.95rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      transition: all 0.15s ease;
+      user-select: none;
+      position: relative;
+    }
+    .note.rest { border-color: #9e9e9e; background-color: #f5f5f5; color: #757575; }
+    .note .duration-tag { font-size: 0.65rem; color: #666; font-weight: normal; }
+    .note .finger-tag { font-size: 0.75rem; color: #0288d1; font-weight: bold; margin-top: 1px; }
+    .note.active { background-color: #ff5722; color: #ffffff; border-color: #d84315; transform: scale(1.15); box-shadow: 0 0 10px rgba(255, 87, 34, 0.6); }
+    .note.active .finger-tag { color: #ffffff; }
+
+    /* コントロール */
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+      background: #fff;
+      padding: 12px 24px;
+      border-radius: 30px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .play-btn {
+      background-color: #4caf50; color: white; border: none; padding: 10px 24px; font-size: 1.1rem;
+      font-weight: bold; border-radius: 20px; cursor: pointer; box-shadow: 0 3px 5px rgba(0,0,0,0.15);
+      transition: background-color 0.2s;
+    }
+    .play-btn.playing { background-color: #f44336; }
+
+    .toggle-hand-btn {
+      background-color: #0288d1;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      font-weight: bold;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background-color 0.2s;
+    }
+    .toggle-hand-btn.off { background-color: #78909c; }
+
+    .control-item { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 1rem; }
+    .measure-select { padding: 4px 8px; font-size: 1rem; font-weight: bold; border: 2px solid #0288d1; border-radius: 6px; color: #0288d1; }
+    .tempo-input { width: 65px; padding: 4px 6px; font-size: 1.1rem; font-weight: bold; text-align: center; border: 2px solid #0288d1; border-radius: 6px; color: #0288d1; }
+    .time-select { padding: 4px 8px; font-size: 1rem; font-weight: bold; border: 2px solid #455a64; border-radius: 6px; }
+
+    /* 鍵盤エリア */
+    .keyboard-wrapper-outer {
+      position: relative;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .keyboard {
+      display: flex;
+      position: relative;
+      background: #333;
+      padding: 15px;
+      border-radius: 12px;
+      overflow: visible;
+    }
+
+    .white-key {
+      position: relative;
+      width: 50px; 
+      height: 180px; 
+      background: #ffffff; 
+      border: 1px solid #ccc; 
+      border-radius: 0 0 6px 6px;
+      margin: 0 2px;
+      cursor: pointer; 
+      display: flex; 
+      align-items: flex-end; 
+      justify-content: center; 
+      padding-bottom: 12px;
+      font-weight: bold; 
+      color: #555; 
+      user-select: none; 
+      box-shadow: inset 0 -6px 0 #e0e0e0, 0 4px 5px rgba(0,0,0,0.2);
+      transition: transform 0.08s ease, background-color 0.08s ease;
+      z-index: 1;
+    }
+    .white-key.pressed, .white-key:active { transform: translateY(6px); background-color: #e0f2fe; color: #0288d1; }
+    .keyboard.disabled .white-key { cursor: not-allowed; }
+
+    /* --- 右手（5本指）レイヤー --- */
+    .hand-overlay-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+      transition: opacity 0.3s ease;
+    }
+    .hand-overlay-layer.hidden { display: none; }
+
+    /* 指5本をまとめるコンテナ */
+    .hand-model-container {
+      position: absolute;
+      top: 15px;
+      left: 123px;
+      width: 254px;
+      height: 180px;
+      transition: left 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    /* 5本の指エレメント */
+    .finger-stem {
+      position: absolute;
+      bottom: 15px;
+      width: 38px;
+      border-radius: 19px;
+      background: linear-gradient(180deg, rgba(59, 130, 246, 0.45) 0%, rgba(37, 99, 235, 0.8) 100%);
+      border: 2px solid #1d4ed8;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 10px;
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 18px;
+      z-index: 11;
+      transition: transform 0.1s ease-out, background-color 0.1s ease;
+    }
+
+    /* 各指のモデル内ローカルオフセット */
+    .finger-1 { left: 8px;   height: 105px; } /* ① 親指 */
+    .finger-2 { left: 62px;  height: 125px; } /* ② 人さし指 */
+    .finger-3 { left: 116px; height: 135px; } /* ③ 中指 */
+    .finger-4 { left: 170px; height: 125px; } /* ④ 薬指 */
+    .finger-5 { left: 224px; height: 105px; } /* ⑤ 小指 */
+
+    /* 鍵盤を押したとき */
+    .finger-stem.pressing {
+      transform: translateY(18px) scale(0.96);
+      background: linear-gradient(180deg, rgba(239, 68, 68, 0.65) 0%, rgba(220, 38, 38, 0.9) 100%);
+      border-color: #b91c1c;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    .finger-sublabel {
+      font-size: 9px;
+      margin-top: 2px;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎹 ケンハをれんしゅうしよう</h1>
+
+  <!-- 1. モード選択画面 -->
+  <div id="modeSelectScreen" class="mode-select-card">
+    <h2>モードを選んでください</h2>
+    <button class="mode-btn btn-practice" onclick="startPracticeMode()">🎵 練習モード（児童用）</button>
+    <button class="mode-btn btn-admin-login" onclick="loginAdminMode()">⚙️ 管理者モード（先生用）</button>
+  </div>
+
+  <!-- 2. アプリ本体画面 -->
+  <div id="appContainer" class="app-container">
+    
+    <div class="top-bar">
+      <div><span id="modeBadge" class="mode-badge">練習モード</span></div>
+      <div>
+        <label>曲を選ぶ:
+          <select id="songSelect" onchange="onSongSelectChange()" style="padding: 5px 10px; font-size: 0.95rem;"></select>
+        </label>
+      </div>
+      <button class="btn-switch-mode" onclick="showModeSelect()">↩ モード選択へ</button>
+    </div>
+
+    <!-- 管理者専用パネル -->
+    <div id="adminPanel" class="admin-panel" style="display: none;">
+      <h2>🛠️ 曲の登録・編集（管理者モード）</h2>
+      <div class="editor-row">
+        <label for="editTitle">曲タイトル:</label>
+        <input type="text" id="editTitle" placeholder="例: 山のポルカ">
+      </div>
+      <div class="editor-row">
+        <label for="editTimeSignature">拍子:</label>
+        <select id="editTimeSignature">
+          <option value="2/4">2/4 拍子</option>
+          <option value="3/4">3/4 拍子</option>
+          <option value="4/4">4/4 拍子</option>
+        </select>
+      </div>
+      <div class="editor-row">
+        <label for="editNotes">楽譜データ:</label>
+        <textarea id="editNotes"></textarea>
+      </div>
+      <div style="font-size: 0.8rem; color: #666; margin-bottom: 10px; margin-left: 95px;">
+        ※ 指番号指定: <code>ソ0.5(3)</code> (1:おやゆび 〜 5:こゆび)
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button class="btn-action btn-delete" onclick="deleteCurrentSong()">🗑️ この曲を削除</button>
+        <button class="btn-action btn-save" onclick="saveSong()">💾 曲を保存・更新</button>
+      </div>
+    </div>
+
+    <!-- 楽譜（小節表示） -->
+    <div class="sheet-music-container">
+      <div class="sheet-title" id="displayTitle">🎼 山のポルカ</div>
+      <div class="measures-wrapper" id="measuresWrapper"></div>
+    </div>
+
+    <!-- コントロール -->
+    <div class="controls">
+      <button class="play-btn" id="playBtn" onclick="togglePlay()">▶ 演奏スタート</button>
+      <button class="toggle-hand-btn" id="toggleHandBtn" onclick="toggleHandDisplay()">🖐️ 右手表示: ON</button>
+
+      <div class="control-item">
+        <span>スタート:</span>
+        <select id="startMeasureSelect" class="measure-select" onchange="onStartMeasureSelectChange()">
+          <option value="0">1小節から</option>
+        </select>
+      </div>
+      
+      <div class="control-item" id="timeControlBox">
+        <span>拍子:</span>
+        <select id="timeSignatureSelect" class="time-select" onchange="onTimeSignatureChange()">
+          <option value="2/4">2/4</option>
+          <option value="3/4">3/4</option>
+          <option value="4/4">4/4</option>
+        </select>
+      </div>
+
+      <div class="control-item" id="tempoControlBox">
+        <span>♩ =</span>
+        <input type="number" id="bpmInput" class="tempo-input" value="100" min="40" max="240" onchange="syncBpmFromInput()">
+        <input type="range" id="bpmRange" min="40" max="240" value="100" step="5" oninput="syncBpmFromRange()">
+      </div>
+    </div>
+
+    <!-- 鍵盤エリア -->
+    <div class="keyboard-wrapper-outer">
+      <div class="keyboard" id="keyboardArea">
+        <div class="white-key" data-note="C4" onclick="playSingleNote('C4')">ド</div>
+        <div class="white-key" data-note="D4" onclick="playSingleNote('D4')">レ</div>
+        <div class="white-key" data-note="E4" onclick="playSingleNote('E4')">ミ</div>
+        <div class="white-key" data-note="F4" onclick="playSingleNote('F4')">ファ</div>
+        <div class="white-key" data-note="G4" onclick="playSingleNote('G4')">ソ</div>
+        <div class="white-key" data-note="A4" onclick="playSingleNote('A4')">ラ</div>
+        <div class="white-key" data-note="B4" onclick="playSingleNote('B4')">シ</div>
+        <div class="white-key" data-note="C5" onclick="playSingleNote('C5')">ド(高)</div>
+
+        <!-- 右手（指5本）表示レイヤー -->
+        <div class="hand-overlay-layer" id="handOverlay">
+          <div class="hand-model-container" id="handModel">
+            <div class="finger-stem finger-1" id="finger1">1<span class="finger-sublabel">おや</span></div>
+            <div class="finger-stem finger-2" id="finger2">2<span class="finger-sublabel">ひとさし</span></div>
+            <div class="finger-stem finger-3" id="finger3">3<span class="finger-sublabel">なか</span></div>
+            <div class="finger-stem finger-4" id="finger4">4<span class="finger-sublabel">くすり</span></div>
+            <div class="finger-stem finger-5" id="finger5">5<span class="finger-sublabel">こゆび</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const ADMIN_PASSWORD = "kenha";
+
+    const defaultSongs = [
+      {
+        id: "yama_no_polka",
+        title: "山のポルカ",
+        timeSignature: "2/4",
+        input: "ソ0.5(3) ソ0.5(3) ミ0.5(1) 休0.5 | ラ0.5(4) ラ0.5(4) ソ0.5(3) 休0.5 | ソ0.5(3) ソ0.5(3) ファ0.5(2) ミ0.5(1) | ファ(2) 休 | シ0.5(3) シ0.5(3) ラ0.5(2) 休0.5 | シ0.5(3) シ0.5(3) ラ0.5(2) 休0.5 | ソ0.5(1) ド(高)0.5(4) シ0.5(3) ラ0.5(2) | ソ(1) 休 | ソ0.5(3) ソ0.5(3) ミ0.5(1) 休0.5 | ラ0.5(4) ラ0.5(4) ソ0.5(3) 休0.5 | ソ0.5(3) ソ0.5(3) ファ0.5(2) ミ0.5(1) | ファ(2) 休 | シ0.5(3) シ0.5(3) ラ0.5(2) 休0.5 | シ0.5(3) シ0.5(3) ラ0.5(2) 休0.5 | ソ0.5(1) ソ0.5(1) ラ0.5(2) シ0.5(3) | ド(高)(4) 休"
+      },
+      {
+        id: "tulip",
+        title: "チューリップ",
+        timeSignature: "3/4",
+        input: "ド(1) レ(2) ミ(3) | ド(1) レ(2) ミ(3) | ソ(5) ミ(3) レ(2) ド(1) | ミ(3) ソ(5) ソ(5) ミ(3) | レ(2) レ(2) ド(1) | 休2"
+      },
+      {
+        id: "kaeru",
+        title: "かえるの合唱",
+        timeSignature: "4/4",
+        input: "ド(1) レ(2) ミ(3) ファ(4) | ミ(3) レ(2) ド(1) 休 | ミ(3) ファ(4) ソ(5) ラ(5) | ソ(5) ファ(4) ミ(3) 休 | ド2(1) ド2(1) | ド(1) レ(2) ミ(3) ファ(4) | ミ(3) レ(2) ド(1)"
+      }
+    ];
+
+    const KEY_POSITIONS = {
+      "C4": 15,
+      "D4": 69,
+      "E4": 123,
+      "F4": 177,
+      "G4": 231,
+      "A4": 285,
+      "B4": 339,
+      "C5": 393
+    };
+
+    const FINGER_OFFSETS = {
+      1: 0,
+      2: 54,
+      3: 108,
+      4: 162,
+      5: 216
+    };
+
+    const noteMap = { "ド": "C4", "レ": "D4", "ミ": "E4", "ファ": "F4", "ソ": "G4", "拉": "A4", "ラ": "A4", "シ": "B4", "ド(高)": "C5" };
+    const noteFrequencies = { "C4": 261.63, "D4": 293.66, "E4": 329.63, "F4": 349.23, "G4": 392.00, "A4": 440.00, "B4": 493.88, "C5": 523.25 };
+
+    let songs = [];
+    let currentSong = null;
+    let isAdmin = false;
+    let showHand = true;
+    let selectedStartMeasureIndex = 0;
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let isPlaying = false;
+    let timerId = null;
+
+    function syncBpmFromInput() {
+      const val = document.getElementById('bpmInput').value;
+      document.getElementById('bpmRange').value = val;
+    }
+
+    function syncBpmFromRange() {
+      const val = document.getElementById('bpmRange').value;
+      document.getElementById('bpmInput').value = val;
+    }
+
+    function onTimeSignatureChange() {
+      const selectedTime = document.getElementById('timeSignatureSelect').value;
+      currentSong.timeSignature = selectedTime;
+      if (isAdmin) {
+        document.getElementById('editTimeSignature').value = selectedTime;
+      }
+      renderScore();
+    }
+
+    function toggleHandDisplay() {
+      showHand = !showHand;
+      const btn = document.getElementById('toggleHandBtn');
+      const overlay = document.getElementById('handOverlay');
+
+      if (showHand) {
+        btn.innerText = "🖐️ 右手表示: ON";
+        btn.classList.remove('off');
+        overlay.classList.remove('hidden');
+      } else {
+        btn.innerText = "🖐️ 右手表示: OFF";
+        btn.classList.add('off');
+        overlay.classList.add('hidden');
+      }
+    }
+
+    function initSongs() {
+      const saved = localStorage.getItem('pianica_songs');
+      if (saved) {
+        try {
+          songs = JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to parse saved songs:", e);
+          songs = [...defaultSongs];
+          saveSongsToStorage();
+        }
+      } else {
+        songs = [...defaultSongs];
+        saveSongsToStorage();
+      }
+    }
+
+    function saveSongsToStorage() {
+      localStorage.setItem('pianica_songs', JSON.stringify(songs));
+    }
+
+    function showModeSelect() {
+      stopPlay();
+      document.getElementById('modeSelectScreen').style.display = 'block';
+      document.getElementById('appContainer').style.display = 'none';
+    }
+
+    function startPracticeMode() {
+      isAdmin = false;
+      setupAppUI();
+    }
+
+    function loginAdminMode() {
+      const input = prompt("管理者パスワードを入力してください:");
+      if (input === ADMIN_PASSWORD) {
+        isAdmin = true;
+        setupAppUI();
+      } else if (input !== null) {
+        alert("パスワードが違います。");
+      }
+    }
+
+    function setupAppUI() {
+      document.getElementById('modeSelectScreen').style.display = 'none';
+      document.getElementById('appContainer').style.display = 'flex';
+
+      const badge = document.getElementById('modeBadge');
+      const adminPanel = document.getElementById('adminPanel');
+      const timeBox = document.getElementById('timeControlBox');
+      const tempoBox = document.getElementById('tempoControlBox');
+
+      if (isAdmin) {
+        badge.innerText = "⚙️ 管理者モード";
+        badge.className = "mode-badge badge-admin";
+        adminPanel.style.display = 'block';
+        timeBox.style.display = 'flex';
+        tempoBox.style.display = 'flex';
+      } else {
+        badge.innerText = "🎵 練習モード";
+        badge.className = "mode-badge badge-practice";
+        adminPanel.style.display = 'none';
+        timeBox.style.display = 'none';
+        tempoBox.style.display = 'none';
+      }
+
+      updateSongDropdown();
+      loadSelectedSong();
+    }
+
+    function updateSongDropdown() {
+      const select = document.getElementById('songSelect');
+      select.innerHTML = '';
+
+      songs.forEach((song, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.innerText = song.title;
+        select.appendChild(opt);
+      });
+
+      if (isAdmin) {
+        const newOpt = document.createElement('option');
+        newOpt.value = "new";
+        newOpt.innerText = "➕ 新しい曲を追加...";
+        select.appendChild(newOpt);
+      }
+    }
+
+    function onSongSelectChange() {
+      stopPlay();
+      loadSelectedSong();
+    }
+
+    function loadSelectedSong() {
+      selectedStartMeasureIndex = 0;
+
+      const val = document.getElementById('songSelect').value;
+
+      if (val === "new") {
+        currentSong = { id: Date.now().toString(), title: "新しい曲", timeSignature: "4/4", input: "ド(1) レ(2) ミ(3) | 休2" };
+        document.getElementById('editTitle').value = "";
+        document.getElementById('editTimeSignature').value = "4/4";
+        document.getElementById('editNotes').value = "";
+      } else {
+        const idx = parseInt(val, 10);
+        currentSong = songs[idx] || songs[0];
+        if (!currentSong.timeSignature) currentSong.timeSignature = "4/4";
+        document.getElementById('editTitle').value = currentSong.title;
+        document.getElementById('editTimeSignature').value = currentSong.timeSignature;
+        document.getElementById('editNotes').value = currentSong.input;
+      }
+
+      document.getElementById('timeSignatureSelect').value = currentSong.timeSignature;
+      setHandPosition(123);
+      renderScore();
+    }
+
+    function setHandPosition(posLeft) {
+      const handModel = document.getElementById('handModel');
+      if (handModel) {
+        handModel.style.left = `${posLeft}px`;
+      }
+    }
+
+    function saveSong() {
+      const title = document.getElementById('editTitle').value.trim() || "無題の曲";
+      const timeSignature = document.getElementById('editTimeSignature').value;
+      const input = document.getElementById('editNotes').value;
+
+      currentSong.title = title;
+      currentSong.timeSignature = timeSignature;
+      currentSong.input = input;
+
+      const existingIdx = songs.findIndex(s => s.id === currentSong.id);
+      if (existingIdx >= 0) {
+        songs[existingIdx] = currentSong;
+      } else {
+        songs.push(currentSong);
+      }
+
+      saveSongsToStorage();
+      updateSongDropdown();
+      
+      const newIdx = songs.findIndex(s => s.id === currentSong.id);
+      document.getElementById('songSelect').value = newIdx;
+      
+      document.getElementById('timeSignatureSelect').value = timeSignature;
+      renderScore();
+      alert("曲を保存しました！");
+    }
+
+    function deleteCurrentSong() {
+      if (songs.length <= 1) {
+        alert("曲は最低1つ必要です。");
+        return;
+      }
+      if (confirm(`「${currentSong.title}」を削除しますか？`)) {
+        songs = songs.filter(s => s.id !== currentSong.id);
+        saveSongsToStorage();
+        updateSongDropdown();
+        loadSelectedSong();
+      }
+    }
+
+    function parseToken(token) {
+      if (!token) return null;
+      const isRest = token.startsWith("休") || token.startsWith("V") || token.startsWith("v");
+      
+      let fingerNumber = null;
+      const fingerMatch = token.match(/\((\d)\)/);
+      if (fingerMatch) {
+        fingerNumber = parseInt(fingerMatch[1], 10);
+      }
+
+      const cleanToken = token.replace(/\(\d\)/, '');
+      const match = cleanToken.match(/^([^\d.]+)([\d.]*)$/);
+      if (!match) return null;
+
+      const name = match[1];
+      const duration = match[2] ? parseFloat(match[2]) : 1.0;
+
+      if (isRest) return { isRest: true, name: "𝄽", duration, finger: null };
+      return { isRest: false, name, note: noteMap[name] || "C4", duration, finger: fingerNumber };
+    }
+
+    function parseNotesInput(inputText) {
+      const rawMeasures = inputText.split(/[|｜]/);
+      const measures = [];
+      rawMeasures.forEach(mStr => {
+        const tokens = mStr.trim().split(/\s+/);
+        const measureNotes = [];
+        tokens.forEach(token => {
+          const parsed = parseToken(token);
+          if (parsed) measureNotes.push(parsed);
+        });
+        if (measureNotes.length > 0) measures.push(measureNotes);
+      });
+      return measures;
+    }
+
+    function selectStartMeasure(mIndex) {
+      if (isPlaying) stopPlay();
+      selectedStartMeasureIndex = mIndex;
+      updateMeasureHighlight();
+      document.getElementById('startMeasureSelect').value = mIndex;
+      updatePlayBtnText();
+    }
+
+    function onStartMeasureSelectChange() {
+      if (isPlaying) stopPlay();
+      const val = parseInt(document.getElementById('startMeasureSelect').value, 10);
+      selectedStartMeasureIndex = val;
+      updateMeasureHighlight();
+      updatePlayBtnText();
+    }
+
+    function updateMeasureHighlight() {
+      document.querySelectorAll('.measure').forEach((el, idx) => {
+        if (idx === selectedStartMeasureIndex) {
+          el.classList.add('selected-start');
+        } else {
+          el.classList.remove('selected-start');
+        }
+      });
+    }
+
+    function updatePlayBtnText() {
+      const btn = document.getElementById('playBtn');
+      if (isPlaying) {
+        btn.innerText = "⏹ 停止";
+        btn.classList.add('playing');
+      } else {
+        btn.classList.remove('playing');
+        if (selectedStartMeasureIndex > 0) {
+          btn.innerText = `▶ ${selectedStartMeasureIndex + 1}小節からスタート`;
+        } else {
+          btn.innerText = "▶ 演奏スタート";
+        }
+      }
+    }
+
+    function renderScore() {
+      document.getElementById('displayTitle').innerText = `🎼 ${currentSong.title}`;
+      const wrapper = document.getElementById('measuresWrapper');
+      wrapper.innerHTML = '';
+
+      const timeSigParts = (currentSong.timeSignature || "4/4").split('/');
+      const timeDiv = document.createElement('div');
+      timeDiv.className = 'time-signature';
+      timeDiv.innerHTML = `<div>${timeSigParts[0]}</div><div>${timeSigParts[1]}</div>`;
+      wrapper.appendChild(timeDiv);
+
+      const parsedMeasures = parseNotesInput(currentSong.input);
+
+      const mSelect = document.getElementById('startMeasureSelect');
+      mSelect.innerHTML = '';
+
+      parsedMeasures.forEach((measure, mIndex) => {
+        const opt = document.createElement('option');
+        opt.value = mIndex;
+        opt.innerText = `${mIndex + 1}小節から`;
+        mSelect.appendChild(opt);
+
+        const measureDiv = document.createElement('div');
+        measureDiv.className = `measure ${mIndex === selectedStartMeasureIndex ? 'selected-start' : ''}`;
+        measureDiv.onclick = () => selectStartMeasure(mIndex);
+
+        const numDiv = document.createElement('div');
+        numDiv.className = 'measure-number';
+        numDiv.innerText = `${mIndex + 1}小節`;
+        measureDiv.appendChild(numDiv);
+
+        measure.forEach((noteObj, nIndex) => {
+          const noteDiv = document.createElement('div');
+          noteDiv.className = `note ${noteObj.isRest ? 'rest' : ''}`;
+          noteDiv.id = `note-${mIndex}-${nIndex}`;
+          
+          let durationText = noteObj.duration !== 1 ? `${noteObj.duration}拍` : '';
+          let fingerText = noteObj.finger ? `(${noteObj.finger})` : '';
+          
+          noteDiv.innerHTML = `
+            <span>${noteObj.name}</span>
+            ${durationText ? `<span class="duration-tag">${durationText}</span>` : ''}
+            ${fingerText ? `<span class="finger-tag">${fingerText}</span>` : ''}
+          `;
+          
+          measureDiv.appendChild(noteDiv);
+        });
+
+        wrapper.appendChild(measureDiv);
+      });
+
+      mSelect.value = selectedStartMeasureIndex;
+      updatePlayBtnText();
+    }
+
+    function playSound(freq, durationSec) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + durationSec);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + durationSec);
+    }
+
+    function playSingleNote(noteName) {
+      if (isPlaying) return;
+      triggerKeyVisual(noteName);
+      if (noteFrequencies[noteName]) playSound(noteFrequencies[noteName], 0.4);
+    }
+
+    function updateHandPositionAndFingerPress(noteName, fingerNumber, durationMs) {
+      clearAllFingerPressing();
+      if (!showHand || !fingerNumber) return;
+
+      const keyLeft = KEY_POSITIONS[noteName];
+      const fingerOffset = FINGER_OFFSETS[fingerNumber];
+
+      if (keyLeft !== undefined && fingerOffset !== undefined) {
+        const requiredHandLeft = keyLeft - fingerOffset;
+        setHandPosition(requiredHandLeft);
+      }
+
+      const targetFingerEl = document.getElementById(`finger${fingerNumber}`);
+      if (targetFingerEl) {
+        targetFingerEl.classList.add('pressing');
+        setTimeout(() => {
+          targetFingerEl.classList.remove('pressing');
+        }, Math.min(durationMs, 800));
+      }
+    }
+
+    function clearAllFingerPressing() {
+      document.querySelectorAll('.finger-stem').forEach(el => el.classList.remove('pressing'));
+    }
+
+    function triggerKeyVisual(noteName, durationMs = 350, fingerNumber = null) {
+      const keyEl = document.querySelector(`.white-key[data-note="${noteName}"]`);
+      if (keyEl) {
+        keyEl.classList.add('pressed');
+        if (fingerNumber) {
+          updateHandPositionAndFingerPress(noteName, fingerNumber, durationMs);
+        }
+        setTimeout(() => {
+          keyEl.classList.remove('pressed');
+        }, Math.min(durationMs, 800));
+      }
+    }
+
+    function highlightNote(mIndex, nIndex) {
+      document.querySelectorAll('.note').forEach(el => el.classList.remove('active'));
+      const currentEl = document.getElementById(`note-${mIndex}-${nIndex}`);
+      if (currentEl) {
+        currentEl.classList.add('active');
+        currentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+
+    function stopPlay() {
+      isPlaying = false;
+      clearTimeout(timerId);
+      clearAllFingerPressing();
+      updatePlayBtnText();
+      document.querySelectorAll('.note').forEach(el => el.classList.remove('active'));
+      document.getElementById('keyboardArea').classList.remove('disabled');
+      
+      if (currentSong && currentSong.id === "yama_no_polka") {
+        setHandPosition(123);
+      }
+    }
+
+    function togglePlay() {
+      if (isPlaying) {
+        stopPlay();
+        return;
+      }
+
+      isPlaying = true;
+      updatePlayBtnText();
+      document.getElementById('keyboardArea').classList.add('disabled');
+
+      const quarterNoteBpm = parseFloat(document.getElementById('bpmInput').value) || 100;
+      const quarterNoteDurationMs = (60 / quarterNoteBpm) * 1000;
+
+      const parsedMeasures = parseNotesInput(currentSong.input);
+
+      let sequence = [];
+      parsedMeasures.forEach((measure, mIndex) => {
+        if (mIndex >= selectedStartMeasureIndex) {
+          measure.forEach((noteObj, nIndex) => {
+            sequence.push({ ...noteObj, mIndex, nIndex });
+          });
+        }
+      });
+
+      if (sequence.length === 0) {
+        stopPlay();
+        return;
+      }
+
+      let step = 0;
+      function playStep() {
+        if (!isPlaying) return;
+        if (step >= sequence.length) {
+          stopPlay();
+          return;
+        }
+
+        const current = sequence[step];
+        const stepDurationMs = quarterNoteDurationMs * current.duration;
+
+        highlightNote(current.mIndex, current.nIndex);
+
+        if (!current.isRest) {
+          triggerKeyVisual(current.note, stepDurationMs, current.finger);
+          playSound(noteFrequencies[current.note], stepDurationMs / 1000);
+        } else {
+          clearAllFingerPressing();
+        }
+
+        step++;
+        timerId = setTimeout(playStep, stepDurationMs);
+      }
+
+      playStep();
+    }
+
+    window.onload = () => {
+      initSongs();
+      showModeSelect();
+    };
+  </script>
+</body>
+</html>
